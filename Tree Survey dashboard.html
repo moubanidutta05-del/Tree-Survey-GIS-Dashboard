@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Tree Survey GIS Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0d1b2a;
+  color: #fff;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#header {
+  background: linear-gradient(135deg, #1a3a5c 0%, #0d2137 100%);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #2ecc71;
+  flex-shrink: 0;
+}
+
+#header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2ecc71;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+#header .subtitle {
+  font-size: 11px;
+  color: #90b8d4;
+  margin-top: 2px;
+}
+
+#stats-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-pill {
+  background: rgba(46,204,113,0.15);
+  border: 1px solid rgba(46,204,113,0.4);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.stat-pill span {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+#map-container {
+  flex: 1;
+  position: relative;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+#sidebar {
+  width: 280px;
+  background: #0d1b2a;
+  border-left: 2px solid #1a3a5c;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-section {
+  padding: 12px;
+  border-bottom: 1px solid #1a3a5c;
+}
+
+.sidebar-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #2ecc71;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+/* LEGEND */
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #c8dde9;
+}
+
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+}
+
+.legend-section-title {
+  font-size: 10px;
+  color: #6a8fa0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 8px 0 5px;
+  font-weight: 600;
+}
+
+/* PIE CHART */
+#pie-container {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
+}
+
+#pieChart {
+  width: 100% !important;
+}
+
+#pie-labels {
+  margin-top: 8px;
+}
+
+.pie-label-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+
+.pie-label-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.pie-label-name {
+  flex: 1;
+  color: #a8c8da;
+  margin: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pie-label-count {
+  color: #fff;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+/* NORTH ARROW on map */
+.north-arrow-control {
+  background: rgba(13,27,42,0.92);
+  border: 1px solid #1a3a5c;
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.north-arrow-svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.north-label {
+  color: #2ecc71;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* Leaflet overrides */
+.leaflet-control-scale-line {
+  background: rgba(13,27,42,0.85) !important;
+  border-color: #2ecc71 !important;
+  color: #2ecc71 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(13,27,42,0.92) !important;
+  color: #2ecc71 !important;
+  border-color: #1a3a5c !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0d2137 !important;
+  color: #c8dde9 !important;
+  border: 1px solid #2ecc71 !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+
+.leaflet-popup-tip {
+  background: #0d2137 !important;
+}
+
+.leaflet-popup-content b {
+  color: #2ecc71;
+}
+
+/* Health badge in popup */
+.health-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.health-Healthy { background: rgba(46,204,113,0.25); color: #2ecc71; }
+.health-Dead    { background: rgba(231,76,60,0.25);  color: #e74c3c; }
+.health-Diseased{ background: rgba(230,126,34,0.25); color: #e67e22; }
+.health-Damaged { background: rgba(241,196,15,0.25); color: #f1c40f; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>🌳 Tree Survey GIS Dashboard</h1>
+    <div class="subtitle">Pimpri-Chinchwad Municipal Area · Urban Tree Inventory</div>
+  </div>
+  <div id="stats-bar">
+    <div class="stat-pill">Total Trees: <span id="total-count">—</span></div>
+    <div class="stat-pill">Healthy: <span id="healthy-count">—</span></div>
+    <div class="stat-pill">At Risk: <span id="risk-count">—</span></div>
+    <div class="stat-pill">Species: <span id="species-count">—</span></div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="map-container">
+    <div id="map"></div>
+  </div>
+
+  <div id="sidebar">
+    <!-- LEGEND -->
+    <div class="sidebar-section">
+      <h3>📍 Legend</h3>
+
+      <div class="legend-section-title">Tree Health Status</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div>Healthy</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>Dead</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div>Diseased</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f1c40f"></div>Damaged</div>
+
+      <div class="legend-section-title" style="margin-top:12px">Height Class</div>
+      <div class="legend-item">
+        <svg width="14" height="14"><circle cx="7" cy="7" r="3" fill="#90b8d4"/></svg>
+        &lt; 10 m (Small)
+      </div>
+      <div class="legend-item">
+        <svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#90b8d4"/></svg>
+        10 – 20 m (Medium)
+      </div>
+      <div class="legend-item">
+        <svg width="14" height="14"><circle cx="7" cy="7" r="7" fill="#90b8d4"/></svg>
+        &gt; 20 m (Tall)
+      </div>
+    </div>
+
+    <!-- PIE CHART -->
+    <div class="sidebar-section">
+      <h3>📊 Tree Frequency by Species</h3>
+      <div id="pie-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div id="pie-labels"></div>
+    </div>
+
+    <!-- HEALTH SUMMARY -->
+    <div class="sidebar-section">
+      <h3>🏥 Health Summary</h3>
+      <div id="health-bars"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+var data = [{"type":"Feature","properties":{"TreeName":"Ashok","TreeID":"1341","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855642,18.457515]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1340","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855615,18.4573]}},{"type":"Feature","properties":{"TreeName":"Rain Tree","TreeID":"1339","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855732,18.457224]}},{"type":"Feature","properties":{"TreeName":"Pine","TreeID":"1337","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855614,18.457139]}},{"type":"Feature","properties":{"TreeName":"Yellow Shower","TreeID":"1336","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855656,18.456916]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1335","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855638,18.457043]}},{"type":"Feature","properties":{"TreeName":"Custrad/Sugar Apple","TreeID":"1334","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855524,18.457083]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1333","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.856235,18.456645]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1332","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.856184,18.456593]}},{"type":"Feature","properties":{"TreeName":"Yellow Shower","TreeID":"1331","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.856149,18.456708]}},{"type":"Feature","properties":{"TreeName":"Yellow Shower","TreeID":"1330","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855562,18.456928]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1329","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855379,18.45682]}},{"type":"Feature","properties":{"TreeName":"Spanish Cherry","TreeID":"1328","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855379,18.456753]}},{"type":"Feature","properties":{"TreeName":"Spanish Cherry","TreeID":"1327","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855167,18.456703]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1326","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855213,18.45676]}},{"type":"Feature","properties":{"TreeName":"Ashok","TreeID":"1325","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855298,18.456498]}},{"type":"Feature","properties":{"TreeName":"Ashok","TreeID":"1324","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.855356,18.456544]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1719","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.8515,18.458951]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1718","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851457,18.458977]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1143","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851066,18.459201]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1142","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850885,18.458963]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1141","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850953,18.45897]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1140","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851164,18.45936]}},{"type":"Feature","properties":{"TreeName":"Yellow Shower","TreeID":"1139","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851156,18.45948]}},{"type":"Feature","properties":{"TreeName":"Peepal","TreeID":"1138","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851109,18.459224]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1717","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850903,18.459028]}},{"type":"Feature","properties":{"TreeName":"Yellow Shower","TreeID":"1137","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851056,18.459218]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1716","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850792,18.45894]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1136","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851197,18.458943]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1715","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850729,18.458863]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1135","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851281,18.458895]}},{"type":"Feature","properties":{"TreeName":"Banyan","TreeID":"1710","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850816,18.458896]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1134","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852363,18.459003]}},{"type":"Feature","properties":{"TreeName":"Badam","TreeID":"1714","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850707,18.458672]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1133","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852393,18.458991]}},{"type":"Feature","properties":{"TreeName":"Arjun","TreeID":"1713","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850678,18.458882]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1132","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852449,18.458989]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1712","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850783,18.458859]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1131","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852481,18.458924]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1711","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850721,18.458892]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1709","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850902,18.459005]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1708","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850971,18.459059]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1707","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850897,18.459152]}},{"type":"Feature","properties":{"TreeName":"Peepal","TreeID":"1706","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.850995,18.459259]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1705","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851198,18.459168]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1704","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.851278,18.459264]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1703","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85122,18.45922]}},{"type":"Feature","properties":{"TreeName":"Rain Tree","TreeID":"1702","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85163,18.458963]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1701","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852232,18.458975]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1450","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852319,18.458958]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1449","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852365,18.458983]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1448","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852433,18.458993]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1447","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.852461,18.458971]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1446","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.8525,18.458951]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1151","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.854806,18.458768]}},{"type":"Feature","properties":{"TreeName":"Silver Oak","TreeID":"1154","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.854824,18.458685]}},{"type":"Feature","properties":{"TreeName":"Silver Oak","TreeID":"1153","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.854853,18.458759]}},{"type":"Feature","properties":{"TreeName":"Silver Oak","TreeID":"1152","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.854848,18.458741]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1619","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857295,18.457409]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1569","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85735,18.457545]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1618","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857364,18.457528]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1568","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857358,18.457512]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1567","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858011,18.457359]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1617","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858011,18.457353]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1616","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857966,18.457353]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1566","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858039,18.457352]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1615","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85801,18.457345]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1565","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858061,18.45715]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1614","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858028,18.45715]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1564","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858082,18.457133]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1613","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858063,18.457108]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1563","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.8581,18.457037]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1612","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858052,18.457072]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1562","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857941,18.457502]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1661","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857792,18.45744]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1561","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857845,18.457446]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1610","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857881,18.457441]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1560","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857871,18.457481]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1609","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857893,18.457467]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1559","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857893,18.457506]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1558","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.857918,18.457454]}},{"type":"Feature","properties":{"TreeName":"Mango","TreeID":"1608","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857992,18.457463]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1607","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858015,18.457509]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1557","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857604,18.456982]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1606","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857625,18.457003]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1556","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857547,18.456973]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1605","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857567,18.457047]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1555","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857484,18.456966]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1604","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857499,18.456974]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1554","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85751,18.456954]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1603","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857576,18.457004]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1553","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85758,18.457]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1602","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857461,18.457106]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1552","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857326,18.456968]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1601","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857301,18.456976]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1551","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857307,18.457014]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1444","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857323,18.45738]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1445","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857382,18.45741]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1443","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857397,18.457397]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1442","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857682,18.457344]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1444","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857977,18.45722]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1440","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858045,18.457248]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1439","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85803,18.457157]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1438","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858031,18.45716]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1437","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85812,18.457059]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1436","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858092,18.457092]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1435","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.8581,18.45701]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1434","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858112,18.457047]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1433","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858081,18.457024]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1432","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.858019,18.456986]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1431","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857912,18.457043]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1430","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857941,18.456956]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1429","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857992,18.456989]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1428","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85781,18.457013]}},{"type":"Feature","properties":{"TreeName":"Rain Tree","TreeID":"1427","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857763,18.457041]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1426","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857658,18.45703]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1511","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857719,18.457019]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1510","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857689,18.456991]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"1509","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857668,18.457017]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1508","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85743,18.457107]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1507","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857455,18.457021]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1506","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857495,18.457026]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1505","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.85746,18.457017]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1504","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857356,18.457024]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1503","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857371,18.456965]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1502","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857373,18.457005]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1501","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.857358,18.456942]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1323","Height":"10 - 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.853119,18.459735]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1322","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853303,18.459754]}},{"type":"Feature","properties":{"TreeName":"Rain Tree","TreeID":"1321","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.853376,18.459748]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1320","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853475,18.459736]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1319","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853532,18.459774]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1318","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.853583,18.459733]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1317","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853618,18.459779]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1316","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853668,18.459802]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"1315","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853695,18.45978]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1314","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853725,18.459761]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1313","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853806,18.459766]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1312","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853792,18.459768]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1310","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853816,18.459793]}},{"type":"Feature","properties":{"TreeName":"Spanish Cherry","TreeID":"1309","Height":"Less Than 10 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853857,18.45973]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1306","Height":"More than 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853895,18.459802]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1307","Height":"10 - 20 m","Health":"Healthy"},"geometry":{"type":"Point","coordinates":[73.853867,18.459685]}},{"type":"Feature","properties":{"TreeName":"Neem","TreeID":"0489","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.851753,18.458953]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1240","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.851807,18.459228]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1238","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.851807,18.459235]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1234","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.851792,18.459247]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1034","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852046,18.459122]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1019","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852023,18.459164]}},{"type":"Feature","properties":{"TreeName":"Arjun","TreeID":"1086","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852524,18.459212]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1085","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852465,18.459268]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1095","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852314,18.459321]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1030","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.85241,18.459335]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"0889","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852455,18.459415]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0884","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852529,18.459626]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1485","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852467,18.45985]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1484","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852439,18.459848]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1233","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.851913,18.459427]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1202","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852208,18.458759]}},{"type":"Feature","properties":{"TreeName":"Coconut","TreeID":"0432","Height":"More than 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.852174,18.458449]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1051","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.8518,18.458642]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1054","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.85197,18.458957]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"146","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.851769,18.458786]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"376","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.854965,18.45818]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1057","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.854805,18.459145]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1007","Height":"10 - 20 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.854849,18.459036]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"139","Height":"Less Than 10 m","Health":"Dead"},"geometry":{"type":"Point","coordinates":[73.854839,18.458679]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1318","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.853583,18.459733]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"1118","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851979,18.459449]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1499","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851752,18.459408]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1486","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852468,18.459862]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"1305","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852298,18.459327]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"0479","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852547,18.459143]}},{"type":"Feature","properties":{"TreeName":"Suru","TreeID":"0480","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852467,18.459077]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"0440","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852455,18.459135]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"0443","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852221,18.459076]}},{"type":"Feature","properties":{"TreeName":"Badam","TreeID":"0406","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.853504,18.459731]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"1424","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.854374,18.457672]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"0238","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.85506,18.458657]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"0237","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.855107,18.458695]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"0606","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.856533,18.458667]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0288","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.857211,18.458451]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0279","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.855304,18.456567]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0278","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.855288,18.45653]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0259","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.855148,18.455613]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0646","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.856147,18.460168]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0096","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.85214,18.460488]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"0867","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851392,18.460199]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0866","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851445,18.460199]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0865","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851478,18.460202]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0084","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852073,18.460044]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0064","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851329,18.460106]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0058","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851429,18.460174]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0066","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.85143,18.460184]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0069","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851587,18.459944]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0063","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.85164,18.460047]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0068","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851713,18.460331]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"107","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852802,18.459013]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"155","Height":"More than 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852777,18.458976]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"142","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.854772,18.458961]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"133","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.854803,18.4583]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"197","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.854813,18.45844]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"0020","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852632,18.459942]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0053","Height":"Less Than 10 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.852883,18.460013]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0420","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.854219,18.459918]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0419","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.854427,18.459771]}},{"type":"Feature","properties":{"TreeName":"Eucalyptus","TreeID":"0049","Height":"10 - 20 m","Health":"Diseased"},"geometry":{"type":"Point","coordinates":[73.851986,18.460035]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"1323","Height":"10 - 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.853119,18.459735]}},{"type":"Feature","properties":{"TreeName":"Kanchan/Orchid","TreeID":"0496","Height":"More than 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.851483,18.458944]}},{"type":"Feature","properties":{"TreeName":"Ashok","TreeID":"0499","Height":"10 - 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.852345,18.459823]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"0481","Height":"More than 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.852514,18.459154]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"0016","Height":"10 - 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.852562,18.459982]}},{"type":"Feature","properties":{"TreeName":"Gulmohar","TreeID":"0018","Height":"10 - 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.852636,18.460063]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0244","Height":"Less Than 10 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.855412,18.458702]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0241","Height":"Less Than 10 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.855308,18.458735]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0414","Height":"More than 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.854155,18.459709]}},{"type":"Feature","properties":{"TreeName":"Flame Tree","TreeID":"0456","Height":"10 - 20 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.853457,18.459757]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1012","Height":"Less Than 10 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.854841,18.45929]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"1009","Height":"Less Than 10 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.854852,18.459181]}},{"type":"Feature","properties":{"TreeName":"Palm Tree","TreeID":"25","Height":"Less Than 10 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.854775,18.45921]}},{"type":"Feature","properties":{"TreeName":"","TreeID":"0608","Height":"Less Than 10 m","Health":"Damaged"},"geometry":{"type":"Point","coordinates":[73.856824,18.458617]}}];
+
+// ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
+function healthColor(h) {
+  switch(h) {
+    case 'Healthy':  return '#2ecc71';
+    case 'Dead':     return '#e74c3c';
+    case 'Diseased': return '#e67e22';
+    case 'Damaged':  return '#f1c40f';
+    default:         return '#90b8d4';
+  }
+}
+
+function heightRadius(h) {
+  if (h === 'Less Than 10 m') return 5;
+  if (h === '10 - 20 m')      return 7;
+  return 9;
+}
+
+// ─── MAP INIT ─────────────────────────────────────────────────────────────────
+var map = L.map('map', { zoomControl: true }).setView([18.458, 73.853], 14);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  maxZoom: 19
+}).addTo(map);
+
+// ─── GeoJSON LAYER ────────────────────────────────────────────────────────────
+var geoFeatures = data.map(function(f) { return f; });
+
+var layer = L.geoJSON({type:'FeatureCollection', features: geoFeatures}, {
+  pointToLayer: function(feature, latlng) {
+    var p = feature.properties;
+    var color = healthColor(p.Health);
+    var radius = heightRadius(p.Height);
+    return L.circleMarker(latlng, {
+      radius: radius,
+      fillColor: color,
+      color: 'rgba(255,255,255,0.4)',
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 0.85
+    });
+  },
+  onEachFeature: function(feature, layer) {
+    var p = feature.properties;
+    var name = p.TreeName || '<i>Unknown species</i>';
+    var badgeClass = 'health-' + p.Health;
+    layer.bindPopup(
+      '<b>' + name + '</b><br>' +
+      '<b style="color:#90b8d4">Tree ID:</b> ' + p.TreeID + '<br>' +
+      '<b style="color:#90b8d4">Height:</b> ' + p.Height + '<br>' +
+      '<b style="color:#90b8d4">Health:</b> <span class="health-badge ' + badgeClass + '">' + p.Health + '</span>'
+    );
+  }
+}).addTo(map);
+
+map.fitBounds(layer.getBounds());
+
+// ─── SCALE BAR ────────────────────────────────────────────────────────────────
+L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
+
+// ─── NORTH ARROW ──────────────────────────────────────────────────────────────
+var NorthArrow = L.Control.extend({
+  options: { position: 'topleft' },
+  onAdd: function() {
+    var div = L.DomUtil.create('div', 'north-arrow-control');
+    div.innerHTML = `
+      <svg class="north-arrow-svg" width="36" height="52" viewBox="0 0 36 52">
+        <defs>
+          <linearGradient id="na1" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2ecc71"/>
+            <stop offset="100%" stop-color="#1abc9c"/>
+          </linearGradient>
+        </defs>
+        <!-- North half (filled) -->
+        <polygon points="18,4 28,32 18,26 8,32" fill="url(#na1)" opacity="0.95"/>
+        <!-- South half (outline) -->
+        <polygon points="18,48 28,32 18,26 8,32" fill="#1a3a5c" stroke="#2ecc71" stroke-width="1"/>
+        <!-- Center dot -->
+        <circle cx="18" cy="28" r="3" fill="#fff"/>
+        <!-- N label -->
+        <text x="18" y="18" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="Arial">N</text>
+      </svg>
+      <div class="north-label">NORTH</div>`;
+    return div;
+  }
+});
+new NorthArrow().addTo(map);
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+var healthCount = {Healthy:0, Dead:0, Diseased:0, Damaged:0};
+var speciesCount = {};
+var total = data.length;
+
+data.forEach(function(f) {
+  var p = f.properties;
+  var h = p.Health;
+  if (healthCount[h] !== undefined) healthCount[h]++;
+  var name = p.TreeName ? p.TreeName.trim() : '';
+  if (name === '') name = 'Unknown';
+  speciesCount[name] = (speciesCount[name] || 0) + 1;
+});
+
+var atRisk = healthCount.Dead + healthCount.Diseased + healthCount.Damaged;
+var speciesNames = Object.keys(speciesCount).filter(function(k){ return k!=='Unknown'; });
+
+document.getElementById('total-count').textContent   = total;
+document.getElementById('healthy-count').textContent = healthCount.Healthy;
+document.getElementById('risk-count').textContent    = atRisk;
+document.getElementById('species-count').textContent = speciesNames.length;
+
+// ─── PIE CHART ────────────────────────────────────────────────────────────────
+var sortedSpecies = Object.entries(speciesCount)
+  .filter(function(e){ return e[0] !== 'Unknown'; })
+  .sort(function(a,b){ return b[1]-a[1]; });
+
+var top10 = sortedSpecies.slice(0, 10);
+var othersCount = sortedSpecies.slice(10).reduce(function(s,e){ return s+e[1]; }, 0);
+if (othersCount > 0) top10.push(['Others', othersCount]);
+
+var pieColors = [
+  '#2ecc71','#3498db','#e74c3c','#f39c12','#9b59b6',
+  '#1abc9c','#e67e22','#e91e63','#00bcd4','#ff5722','#607d8b'
+];
+
+var pieCtx = document.getElementById('pieChart').getContext('2d');
+new Chart(pieCtx, {
+  type: 'doughnut',
+  data: {
+    labels: top10.map(function(e){ return e[0]; }),
+    datasets: [{
+      data: top10.map(function(e){ return e[1]; }),
+      backgroundColor: pieColors,
+      borderColor: '#0d1b2a',
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '60%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d2137',
+        titleColor: '#2ecc71',
+        bodyColor: '#c8dde9',
+        borderColor: '#2ecc71',
+        borderWidth: 1,
+        callbacks: {
+          label: function(ctx) {
+            var pct = ((ctx.parsed / total)*100).toFixed(1);
+            return ' ' + ctx.parsed + ' trees (' + pct + '%)';
+          }
+        }
+      }
+    }
+  }
+});
+
+// Pie labels
+var labelsHTML = '';
+top10.forEach(function(e, i) {
+  var pct = ((e[1]/total)*100).toFixed(1);
+  labelsHTML += `<div class="pie-label-item">
+    <div class="pie-label-color" style="background:${pieColors[i]}"></div>
+    <span class="pie-label-name" title="${e[0]}">${e[0]}</span>
+    <span class="pie-label-count">${e[1]} (${pct}%)</span>
+  </div>`;
+});
+document.getElementById('pie-labels').innerHTML = labelsHTML;
+
+// ─── HEALTH BARS ──────────────────────────────────────────────────────────────
+var healthBarsHTML = '';
+var healthItems = [
+  {name:'Healthy',  color:'#2ecc71', count: healthCount.Healthy},
+  {name:'Diseased', color:'#e67e22', count: healthCount.Diseased},
+  {name:'Damaged',  color:'#f1c40f', count: healthCount.Damaged},
+  {name:'Dead',     color:'#e74c3c', count: healthCount.Dead}
+];
+healthItems.forEach(function(item) {
+  var pct = ((item.count/total)*100).toFixed(1);
+  healthBarsHTML += `
+  <div style="margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#a8c8da;margin-bottom:3px">
+      <span>${item.name}</span>
+      <span style="color:#fff;font-weight:600">${item.count} (${pct}%)</span>
+    </div>
+    <div style="background:#1a3a5c;border-radius:4px;height:6px;overflow:hidden">
+      <div style="width:${pct}%;background:${item.color};height:100%;border-radius:4px;transition:width 1s"></div>
+    </div>
+  </div>`;
+});
+document.getElementById('health-bars').innerHTML = healthBarsHTML;
+
+</script>
+</body>
+</html>
